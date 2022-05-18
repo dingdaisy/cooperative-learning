@@ -12,7 +12,7 @@ This repository hosts the code for <b>Cooperative Learning</b>, a supervised lea
     * Panel A: Advances in biotechnologies have enabled the collection of <b>a myriad of ``-omics'' data</b> ranging from genomics to proteomics on <b>a common set of samples</b>. These data capture the molecular variations of human health at multiple levels and can help us understand complex biological systems in a more comprehensive way. Fusing the data offers the potential to improve predictive accuracy of disease phenotypes and treatment response, thus enabling better diagnostics and therapeutics.
     * Panel B: Commonly-used approaches to the problem can be broadly categorized into early and late fusion. Early fusion begins by transforming all datasets into a single representation, which is then used as the input to a supervised learning model of choice. Late fusion works by developing first-level models from individual data views and then combining the predictions by training a second-level model as the final predictor. Encompassing early and late fusion, cooperative learning combines the usual squared error loss of predictions with an agreement penalty term to encourage the predictions from different data views to align.
 
-<p align="center"><img src="cooperative_learning/figs/cooperative_learning.jpg" alt="logo" width="1000px" /></p>
+<p align="center"><img src="cooperative_learning/figs/cooperative_learning.jpg" width="1500px" /></p>
 
     
 ## Using Cooperative Learning
