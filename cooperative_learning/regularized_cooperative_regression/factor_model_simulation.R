@@ -22,7 +22,6 @@ val_frac = 0
 test_frac = 0.98
 nfolds = 10
 sim_seed = 33
-
 simN = 10
 alphalist = c(0,0.2,0.4,0.6,0.8,1,3,5,9)
 
@@ -64,8 +63,6 @@ for (ii in 1:simN){
   
   #Only a subset of features are useful
   beta_U = c(rep(factor_strength, p_imp))
-  #beta = c(rep(beta_strength_x,px_imp), rep(0,px-px_imp), 
-  #         rep(beta_strength_z,pz_imp), rep(0,pz-pz_imp))
   mu_all = U %*% beta_U
   y = mu_all + sigma * rnorm(n)
   
@@ -186,7 +183,6 @@ for (ii in 1:simN){
   print(err_fuse_late[ii])
   support_fuse_late[ii] = X_lasso_fit_late$nzero[which(X_lasso_fit_late$lambda == X_lasso_fit_late$lambda.min)] + 
     Z_lasso_fit_late$nzero[which(Z_lasso_fit_late$lambda == Z_lasso_fit_late$lambda.min)]
-  #print(support_fuse_late[ii])
   
   #Cooperative Regression
   print("Cooperative Regression")
@@ -230,9 +226,6 @@ for (ii in 1:simN){
       #New Cooperative Regression
       lambda_x = coop_fit$fit$lam_x
       lambda_z = coop_fit$fit$lam_z
-      #print("xz")
-      #print(paste("lambda_x", lambda_x))
-      #print(paste("lambda_z", lambda_z))
       nx = ncol(train_X)
       nz = ncol(train_Z)
       adjust_factor = (nx * lambda_x + nz * lambda_z) / (nx + nz)
@@ -279,10 +272,6 @@ for (ii in 1:simN){
       #New Cooperative Regression, with penalty factor
       lambda_z = coop_fit$fit$lam_x
       lambda_x = coop_fit$fit$lam_z
-      
-      #print("zx")
-      #print(paste("lambda_z", lambda_z))
-      #print(paste("lambda_x", lambda_x))
       
       nx = ncol(train_X)
       nz = ncol(train_Z)
@@ -357,10 +346,7 @@ sim1_filename = paste(sim_seed, paste0("pimp", p_imp),
                       paste0("factorstr", sy), 
                       paste0("ustd", u_std),  
                       paste0("factor", factor_strength), 
-                      #paste0("beta_xstr", beta_strength_x), 
-                      #paste0("betazstr", beta_strength_z), 
                       paste0("SNR", as.integer(snr_avg)),
-                      #paste0("fitMethod", fitMethod),
                       sep = "_")
 mse_df_file = paste("test_mse", sim1_filename, sep = "_")
 mse_diff_df_file = paste("diff_test_mse", sim1_filename, sep = "_")

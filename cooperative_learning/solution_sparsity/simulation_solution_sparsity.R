@@ -22,7 +22,7 @@ cat(c("snr=",snr),fill=T)
 y=mu+sigma*rnorm(n)
 y=y-mean(y)
 
- coop00 = glmnet(cbind(x,z),y, standardize=F)
+coop00 = glmnet(cbind(x,z),y, standardize=F)
 
 lambda00=coop00$lambda
 lambda00=c(2*max(lambda00),lambda00)
@@ -32,32 +32,31 @@ nz=norm=array(NA, c(nsim,length(alphalist),length(lambda00)))
 
 
 
-for(ii in 1:nsim){
-x=matrix(rnorm(n*p),n,p)
-z=matrix(rnorm(n*p),n,p)
-x=scale(x,T,F)
-z=scale(z,T,F)
-y=rnorm(n)
-y=y-mean(y)
+for (ii in 1:nsim){
+    x=matrix(rnorm(n*p),n,p)
+    z=matrix(rnorm(n*p),n,p)
+    x=scale(x,T,F)
+    z=scale(z,T,F)
+    y=rnorm(n)
+    y=y-mean(y)
 
+    coop0= glmnet(cbind(x,z),y, standardize=F)
+    beta0=predict(coop0,s=lambda00,type="coef")
 
- coop0= glmnet(cbind(x,z),y, standardize=F)
-beta0=predict(coop0,s=lambda00,type="coef")
+    nz0[ii,]=colSums(beta0[-1,]!=0)
+    norm0[ii,]=colSums(abs(beta0[-1,]))
 
-nz0[ii,]=colSums(beta0[-1,]!=0)
-norm0[ii,]=colSums(abs(beta0[-1,]))
+    for (k in 1:length(alphalist)){
+        alpha=alphalist[k]
+        xt0 = rbind(cbind(x, z),
+                      cbind(-sqrt(alpha)*x, sqrt(alpha)*z))
+        yt0 = c(y, rep(0, dim(x)[1]))
 
-for(k in 1:length(alphalist)){
-alpha=alphalist[k]
-xt0 = rbind(cbind(x, z),
-              cbind(-sqrt(alpha)*x, sqrt(alpha)*z))
-  yt0 = c(y, rep(0, dim(x)[1]))
-
- coop = glmnet(xt0, yt0 , standardize=F)
- beta=predict(coop,s=lambda00, type="coef")
-nz[ii,k,]=colSums(beta[-1,]!=0)
-norm[ii,k,]=colSums(abs(beta[-1,]))
- }}
+        coop = glmnet(xt0, yt0 , standardize=F)
+        beta=predict(coop,s=lambda00, type="coef")
+        nz[ii,k,]=colSums(beta[-1,]!=0)
+        norm[ii,k,]=colSums(abs(beta[-1,]))
+    }}
 
 nz0m=colMeans(nz0)
 nzm=apply(nz,c(2,3),mean)
@@ -72,11 +71,9 @@ plot(norm0m,nz0m,type="l", ylim=c(0,36),xlab="L1 norm",
      ylab="Number of nonzero coefficients",lwd=3,xlim=c(0,2.7))
 
 for(k in 1:length(alphalist)){
- #lines(normm[k,],nzm[k,],type="l",col=k+1)
  lines(normm[k,],nzm[k,],type="l",col=color[k], lwd=2)
  }
  legend('bottomright', legend=TeX(sprintf("$\\rho = %5.2f$", c(0,alphalist))),
-        # lwd=c(2,rep(1,length(alphalist))),lty=1,col=1:(1+length(alphalist)),cex=.8)
          lwd=c(3,rep(2,length(alphalist))),
          lty=1,
          col=c('black',color[1:length(alphalist)]),

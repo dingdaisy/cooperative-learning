@@ -16,8 +16,6 @@ coop_cv_multi = function(x1,x2,x3,y,alpha=0,foldid,nfolds=10,
   n_pairs = (n_view * (n_view-1)) / 2
   yt0 = c(y, rep(0, dim(x2)[1]*n_pairs))
   coop0 = glmnet(xt0, yt0, standardize=F, penalty.factor = pf_values)
-  #lasso0 = glmnet(cbind(x,z),y,standardize=F,lambda=coop0$lambda*2,penalty.factor = pf_values)
-  #sum(abs(coop0$beta - lasso0$beta))
   lambda0 = coop0$lambda
   
   outlist = as.list(seq(nfolds))
@@ -50,17 +48,12 @@ coop_cv_multi = function(x1,x2,x3,y,alpha=0,foldid,nfolds=10,
     
     #evaluate
     theta = coef(coop)[-1,]
-    
-    #lasso_theta = coef(lasso)[-1,]
-    #sum(abs(theta-lasso_theta))
-    
     intercept_adjustment_factor = (n_pairs + 1)
     intercept = coef(coop)[1,] * intercept_adjustment_factor
     
     pred_fold = cbind(x1[which, , drop = FALSE],x2[which, , drop = FALSE],x3[which, , drop = FALSE])%*%theta + 
       rep(intercept, each=nrow(x1[which, , drop = FALSE]))
-    #lasso_pred = predict(lasso, cbind(x[which, , drop = FALSE], z[which, , drop = FALSE]))
-    #sum(abs(pred_fold-lasso_pred))
+      
     true_y = y[which]
     err_mse = (pred_fold - replicate(ncol(pred_fold), true_y))^2
     err_cv = apply(err_mse, 2, mean, na.rm = TRUE)

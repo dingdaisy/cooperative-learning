@@ -10,8 +10,6 @@ n = 10000
 px1 = 300 #dimensionality
 px2 = 300
 px3 = 300
-#px_imp = 30 #level of sparsity
-#pz_imp = 30
 p_imp = 60
 sigma = 25 #level of snr, higher more noisy
 sy = 2
@@ -20,18 +18,13 @@ sx2 = 2
 sx3 = 2
 u_std = 1 #std of u
 factor_strength = 2
-#beta_strength_x = 2 #level of signal in x
-#beta_strength_z = 2 #level of signal in z
 train_frac = 0.02
 val_frac = 0
 test_frac = 0.98
 nfolds = 10
-
 sim_seed = 33
-
 fit_mode_coop_adap = 'min'
 fit_mode_coop = 'min'
-
 simN = 10
 alphalist = c(0,0.2,0.4,0.6,0.8,1,3,5,9)
 
@@ -78,8 +71,6 @@ for (ii in 1:simN){
   
   #Only a subset of features are useful
   beta_U = c(rep(factor_strength, p_imp))
-  #beta = c(rep(beta_strength_x,px_imp), rep(0,px-px_imp), 
-  #         rep(beta_strength_z,pz_imp), rep(0,pz-pz_imp))
   mu_all = U %*% beta_U
   y = mu_all + sigma * rnorm(n)
   
@@ -112,10 +103,6 @@ for (ii in 1:simN){
   train_y <- y[train_ind, ]
   val_y <- y[val_ind, ]
   test_y <- y[test_ind, ]
-  
-  #train_X = t(apply(train_X_raw,1,
-  #            function(i)(i-colMeans(train_X_raw))/apply(train_X_raw, 2, sd)))
-  #train_X0 = scale(train_X_raw, T, T)
   
   preprocess_values_train_X1 = preProcess(train_x1_raw, method = c("center", "scale"))
   train_X1 = predict(preprocess_values_train_X1, train_x1_raw)
@@ -158,12 +145,9 @@ for (ii in 1:simN){
   train_e_cv = calc_mse(yhat_lasso_cv, mu_train)
   train_lasso_cv[ii] = train_e_cv
   lasso_support_cv[ii] = fit_lasso_cv$nzero[index_early]
-  #lasso_support_cv_1se[ii] = fit_lasso_cv$nzero[imin_1se]
   test_e_cv = calc_mse(yhat_lasso_cv_test, mu_test)
   test_lasso_cv[ii] = test_e_cv
-  #print(fit_mode)
   print(test_e_cv)
-  #print(lasso_support_cv[ii])
   
   #Lasso X1
   print("Separate X1")
@@ -185,7 +169,6 @@ for (ii in 1:simN){
   test_e_cv_X1 = calc_mse(yhat_lasso_cv_test_X1, mu_test)
   test_lasso_cv_X1[ii] = test_e_cv_X1
   print(test_e_cv_X1)
-  #print(lasso_support_cv_X1[ii])
   
   #Lasso X2
   print("Separate X2")
@@ -207,7 +190,6 @@ for (ii in 1:simN){
   test_e_cv_X2 = calc_mse(yhat_lasso_cv_test_X2, mu_test)
   test_lasso_cv_X2[ii] = test_e_cv_X2
   print(test_e_cv_X2)
-  #print(lasso_support_cv_X2[ii])
   
   #Lasso X3
   print("Separate X3")
@@ -229,7 +211,6 @@ for (ii in 1:simN){
   test_e_cv_X3 = calc_mse(yhat_lasso_cv_test_X3, mu_test)
   test_lasso_cv_X3[ii] = test_e_cv_X3
   print(test_e_cv_X3)
-  #print(lasso_support_cv_X3[ii])
   
   #Late fusion
   print("Late Fusion")
@@ -283,7 +264,6 @@ for (ii in 1:simN){
   
   support_fuse_late[ii] = X1_lasso_fit_late$nzero[late_index_X1] + 
     X2_lasso_fit_late$nzero[late_index_X2] + X3_lasso_fit_late$nzero[late_index_X3]
-  #print(support_fuse_late[ii])
   
   #Cooperative Regression
   
@@ -326,12 +306,10 @@ for (ii in 1:simN){
     test_e_coop_new_no_pf = calc_mse(yhat_coop_new_test_no_pf, mu_test)
     new_test_coop_no_pf[ii,j] = test_e_coop_new_no_pf
     print("Full (no penalty factor)")
-    #print(fit_mode)
     print(new_test_coop_no_pf[ii,j])
     
     test_MSE_min_no_pf[j] = test_e_coop_new_no_pf
     support_min_no_pf[j] = new_support_coop_no_pf[ii, j]
-    #print(new_support_coop_no_pf[ii, j])
     
     #Iterative Coop Learning
     fit_mode = fit_mode_coop_adap
@@ -357,10 +335,7 @@ for (ii in 1:simN){
     lambda_x1 = coop_fit_iter$lam_x1
     lambda_x2 = coop_fit_iter$lam_x2
     lambda_x3 = coop_fit_iter$lam_x3
-    
-    #print(paste("lambda_x1", lambda_x1))
-    #print(paste("lambda_x2", lambda_x2))
-    #print(paste("lambda_x3", lambda_x3))
+
     nx1 = ncol(train_X1)
     nx2 = ncol(train_X2)
     nx3 = ncol(train_X3)
@@ -391,12 +366,10 @@ for (ii in 1:simN){
     test_e_coop_new = calc_mse(yhat_coop_new_test, mu_test)
     new_test_coop[ii,j] = test_e_coop_new
     print("Full (with penalty factor)")
-    #print(fit_mode)
     print(new_test_coop[ii,j])
     
     test_MSE_min[j] = test_e_coop_new
     support_min[j] = new_support_coop[ii, j]
-    #print(new_support_coop[ii, j])
   }
   
   coop_selected_by_cv_no_pf[ii] = test_MSE_min_no_pf[which.min(cvm_min_no_pf)]
@@ -404,7 +377,6 @@ for (ii in 1:simN){
   alpha_by_cv_no_pf[ii] = alphalist[which.min(cvm_min_no_pf)]
   print("Full selected by cv, without pf")
   print(coop_selected_by_cv_no_pf[ii])
-  #print(support_by_cv_no_pf[ii])
   print(alpha_by_cv_no_pf[ii])
   
   coop_selected_by_cv[ii] = test_MSE_min[which.min(cvm_min)]
@@ -412,7 +384,6 @@ for (ii in 1:simN){
   alpha_by_cv[ii] = alphalist[which.min(cvm_min)]
   print("Full selected by cv, with pf")
   print(coop_selected_by_cv[ii])
-  #print(support_by_cv[ii])
   print(alpha_by_cv[ii])
 }
 
@@ -427,8 +398,6 @@ sim1_filename = paste(sim_seed, paste0("pimp", p_imp),
                       paste0("factorx3_", sx3), 
                       paste0("ustd", u_std),  
                       paste0("factor", factor_strength), 
-                      #paste0("beta_xstr", beta_strength_x), 
-                      #paste0("betazstr", beta_strength_z), 
                       paste0("SNR", as.integer(snr_avg)),
                       paste0("mode_", fit_mode_final),
                       sep = "_")

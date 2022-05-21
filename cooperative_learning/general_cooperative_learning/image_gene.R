@@ -31,7 +31,6 @@ make_image = function(n, isig, n_dim=32, max_intensity=6, score){
   
   x = array(0,c(n,n_dim,n_dim,1))
   ind = array(NA,c(n,n_dim,n_dim))
-  #isig = 1 * (sig > median(sig))
   res = matrix(NA,n_dim,n_dim)
   
   for (ii in 1:n){
@@ -65,20 +64,17 @@ make_image = function(n, isig, n_dim=32, max_intensity=6, score){
 #simulation settings
 train_frac = 0.1
 val_frac = 0.1
-
 n = 2000
 p_z = 100
 p_r = 30
 sigma_noise = 60
 beta_strength = 1
-level_intensity = 3.9 #4 is doing well too
+level_intensity = 3.9
 u_std = 2 #sd of latent factors
 s = 6 #strength of u
-
 nsim = 10
 niter = 2
 nepoch = 5
-#late_fusion_val_frac = 0.3
 alphalist = c(0,.5,1,3,5,9,15,20)
 set.seed(9)
 
@@ -94,8 +90,6 @@ for (ii in 1:nsim){
       u_matrix[, m] = s*u
     }
 
-    #beta = rep(beta_strength, p_r)
-    #signal_all = u_matrix %*% beta
     beta = c(rep(beta_strength, p_r), rep(0, p_z - p_r))
     signal_all = z_all %*% beta
     signal_all_noise = signal_all + sigma_noise * rnorm(n)
@@ -208,10 +202,7 @@ for (ii in 1:nsim){
   yhatz_val = as.vector(predict(gfit,z_val))
   yhatz_test = as.vector(predict(gfit,z_test))
   yhatzc_test = 1*(yhatz_test>mean(yhatz_test))
-  #table(ytest,yhatzc)
-  #err_lasso = calc_mse(yhatz_test,y_test)
   res[ii,2] = mean(yhatzc_test!=label_test)
-  #res_score[ii,2] = err_lasso
   print("Genes")
   print(res[ii,2])
   
@@ -220,10 +211,8 @@ for (ii in 1:nsim){
   fit_fuse = lm(y ~ X_pred + Z_pred, data=fuse_data)
   fuse_pred_test = predict(fit_fuse, data.frame(X_pred=as.vector(yhat_test), 
                                                 Z_pred=as.vector(yhatz_test)))
-  #fuse_pred_test = (yhat_test+yhatz_test)/2
   late_yhatc = 1*(fuse_pred_test>mean(fuse_pred_test))
   res[ii,3] = mean(late_yhatc!=label_test)
-  #res_score[ii,3] = calc_mse(fuse_pred_test,y_test)
   print("Late")
   print(res[ii,3])
   
@@ -252,7 +241,6 @@ for (ii in 1:nsim){
     yhat_coop = predict(gfit,z_test) + model %>% predict(x_test)
     yhatc_coop = 1 * (yhat_coop>mean(yhat_coop))
     test_mis[j] = mean(yhatc_coop != label_test)
-    #table(ytest,yhatgc)
     res[ii,j+3+1] = mean(yhatc_coop != label_test)
     print(res[ii,j+3+1])
   }
@@ -270,22 +258,17 @@ dimnames(out) = list(c("mean","se"),
 alpha_axis = sapply(as.character(round(alphalist,1)),
          function(x) paste0("Coop (alpha=",x,")"))
 
-#title still hard-coded right now
 pdf(file="test_misclassification_images_genes.pdf", width=10, height=5)
 par(mfrow=c(1,2), las=2, cex.main=1.2, cex.axis = 1.03, mar=c(7.8,3.3,3.2,0.9))
 boxplot(c(res[,1:4])
         ~sort(rep(1:4, nsim)), 
-        #col = c(rep("white",4),"#ff8080", rep("#BCDEBC",length(alphalist)),
-        #        "#ff8080",rep("#BCDEBC",length(alphalist))),
-        names=c("Only Images","Only Proteomics", "Late", "Coop"), #,alpha_axis), 
+        names=c("Only Images","Only Proteomics", "Late", "Coop"),
         xlab="",ylab="", main="Test Misclassification Error (SNR = 1)")
 
 images_diff = res - res[,3]
 boxplot(c(images_diff[,1:4])
         ~sort(rep(1:4, nsim)), 
-        #col = c(rep("white",4),"#ff8080", rep("#BCDEBC",length(alphalist)),
-        #        "#ff8080",rep("#BCDEBC",length(alphalist))),
-        names=c("Only Images","Only Proteomics", "Late", "Coop"), #, alpha_axis), 
+        names=c("Only Images","Only Proteomics", "Late", "Coop"),
         xlab="",ylab="", main="Difference with Late Fusion (SNR = 1)")
 abline(h=0, lty=2)
 dev.off()

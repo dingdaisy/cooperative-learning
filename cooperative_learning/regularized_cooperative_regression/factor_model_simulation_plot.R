@@ -63,22 +63,16 @@ counts_ada = sapply(alphalist, function(x) sum(alpha_df$alpha_by_cv == x))
 barplot(rbind(counts,counts_ada),
         beside=TRUE,
         main="",
-        #xlab="alpha", #ylab="Count",
         names=c(as.character(round(alphalist,1))),#as.character(round(alphalist,1))),
         ylim=c(0,10), cex.lab=2.0, 
         density=c(66,66),
         angle=c(36,36),
         col=c("#B6D7A8", "#83B9E3"))
-        #col=c("#a4aaa4", "black"))#"#89c589"))
 legend("topleft", c("Coop","Adap Coop"), 
        cex=2.33, 
-       #col=c("#a4aaa4", "black"), 
-       #density=c(66,66),
        pch=15,
-       #angle=c(36,36),
        bty = "n",
        col=c("#B6D7A8", "#83B9E3"))
-#title(main=paste0(TeX(sprintf("$\\alpha$")), "selected by CV (counts)"), line=1.8, cex.lab=2.75)
 title(main=expression(bold(paste("Selected ", rho, " by CV (Counts)"))), line=2.2, cex.lab=2.75)
 mtext(TeX(sprintf("$\\rho$")), side=1, las=1, line=6.3, cex=1.72)
 dev.off()

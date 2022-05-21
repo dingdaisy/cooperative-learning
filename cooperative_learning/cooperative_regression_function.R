@@ -11,7 +11,7 @@ coop_regression_full = function(x,z,y,alpha){
   return(g_fit)
 }
 
-#Stopping Criteria
+# Stopping Criteria
 calc_objective <- function(thetax,thetaz,x_intercept,z_intercept,alpha,x,z,y){
   res = sum((y-(x%*%thetax+x_intercept)-(z%*%thetaz+z_intercept))^2)/2 + 
     alpha*sum(((x%*%thetax+x_intercept)-(z%*%thetaz+z_intercept))^2)/2 
@@ -56,7 +56,6 @@ coop_regression_iter = function(x,z,y,alpha,
     intercept_z_temp=coef(gfit2,s=gfit2$lambda.min)[1]
     cv_error_z_temp=gfit2$cvm[which(gfit2$lambda == gfit2$lambda.min)]
     lam_z_temp = gfit2$lambda.min
-    #print(cv_error_z_temp)
     
     current_obj = calc_objective(thetax_temp,thetaz_temp,
                                  intercept_x_temp,intercept_z_temp,
@@ -200,8 +199,6 @@ coop_cv_new = function(x,z,y,alpha=0,foldid,nfolds=10,pf_values=NULL,n_iter=3){
               cbind(-sqrt(alpha)*x, sqrt(alpha)*z))
   yt0 = c(y, rep(0, dim(x)[1]))
   coop0 = glmnet(xt0, yt0, standardize=F, penalty.factor = pf_values)
-  #lasso0 = glmnet(cbind(x,z),y,standardize=F,lambda=coop0$lambda*2,penalty.factor = pf_values)
-  #sum(abs(coop0$beta - lasso0$beta))
   lambda0 = coop0$lambda
   
   outlist = as.list(seq(nfolds))
@@ -212,7 +209,7 @@ coop_cv_new = function(x,z,y,alpha=0,foldid,nfolds=10,pf_values=NULL,n_iter=3){
     z_sub = z[!which, , drop = FALSE]
     y_sub = y[!which]
     
-    #centering inside seems necessary?
+    #centering inside necessary
     x_sub = scale(x_sub, T, F)
     z_sub = scale(z_sub, T, F)
     
@@ -228,18 +225,10 @@ coop_cv_new = function(x,z,y,alpha=0,foldid,nfolds=10,pf_values=NULL,n_iter=3){
     #lasso = glmnet(cbind(x_sub,z_sub),y_sub,standardize=F, lambda=lambda0*2) #coop$lambda*2)
     
     #evaluate
-    theta = coef(coop)[-1,] #matrix of coefficients, go through thetas, px100, column by column, find the support, LS estimates, new column of theta,
-    #replace, prediction different, better fit with fewer features, by de-shrinking achieves better performance
-    #coef, gamma 0, make sure the intercept is correct 
-    
-    #lasso_theta = coef(lasso)[-1,]
-    #sum(abs(theta-lasso_theta))
-    
+    theta = coef(coop)[-1,]
     intercept = coef(coop)[1,] * 2
     pred_fold = cbind(x[which, , drop = FALSE], z[which, , drop = FALSE]) %*% theta + 
       rep(intercept, each=nrow(x[which, , drop = FALSE]))
-    #lasso_pred = predict(lasso, cbind(x[which, , drop = FALSE], z[which, , drop = FALSE]))
-    #sum(abs(pred_fold-lasso_pred))
     true_y = y[which]
     err_mse = (pred_fold - replicate(ncol(pred_fold), true_y))^2
     err_cv = apply(err_mse, 2, mean, na.rm = TRUE)
@@ -247,11 +236,9 @@ coop_cv_new = function(x,z,y,alpha=0,foldid,nfolds=10,pf_values=NULL,n_iter=3){
   }
   
   cvm = apply(err_mat, 2, mean, na.rm = TRUE)
-  #cvsd = apply(err_mat, 2, sd)
   cvsd = sqrt(apply(scale(err_mat, cvm, FALSE)^2, 2, mean, na.rm = TRUE)/(nfolds - 1))
   
   cvm_min_ind = which.min(cvm)
-  #will remove repetitive fit later
   best_fit = glmnet(xt0, yt0, standardize=F, lambda = lambda0[cvm_min_ind], penalty.factor = pf_values)
   full_fit = glmnet(xt0, yt0, standardize=F, lambda = lambda0, penalty.factor = pf_values)
   n_nonzero = full_fit$df
@@ -269,8 +256,6 @@ coop_cv_new_1se = function(x,z,y,alpha=0,foldid,nfolds=10,pf_values=NULL,n_iter=
               cbind(-sqrt(alpha)*x, sqrt(alpha)*z))
   yt0 = c(y, rep(0, dim(x)[1]))
   coop0 = glmnet(xt0, yt0, standardize=F, penalty.factor = pf_values)
-  #lasso0 = glmnet(cbind(x,z),y,standardize=F,lambda=coop0$lambda*2,penalty.factor = pf_values)
-  #sum(abs(coop0$beta - lasso0$beta))
   lambda0 = coop0$lambda
   
   outlist = as.list(seq(nfolds))
@@ -298,15 +283,9 @@ coop_cv_new_1se = function(x,z,y,alpha=0,foldid,nfolds=10,pf_values=NULL,n_iter=
     
     #evaluate
     theta = coef(coop)[-1,] 
-    
-    #lasso_theta = coef(lasso)[-1,]
-    #sum(abs(theta-lasso_theta))
-    
     intercept = coef(coop)[1,] * 2
     pred_fold = cbind(x[which, , drop = FALSE], z[which, , drop = FALSE]) %*% theta + 
       rep(intercept, each=nrow(x[which, , drop = FALSE]))
-    #lasso_pred = predict(lasso, cbind(x[which, , drop = FALSE], z[which, , drop = FALSE]))
-    #sum(abs(pred_fold-lasso_pred))
     true_y = y[which]
     err_mse = (pred_fold - replicate(ncol(pred_fold), true_y))^2
     err_cv = apply(err_mse, 2, mean, na.rm = TRUE)
@@ -315,10 +294,8 @@ coop_cv_new_1se = function(x,z,y,alpha=0,foldid,nfolds=10,pf_values=NULL,n_iter=
   
   cvm = apply(err_mat, 2, mean, na.rm = TRUE)
   nn = apply(!is.na(err_mat), 2, sum, na.rm = T)
-  cvse = sqrt(apply(err_mat, 2, var, na.rm = T)/nn)
-  
+  cvse = sqrt(apply(err_mat, 2, var, na.rm = T)/nn)  
   cvsd = apply(err_mat, 2, sd)
-  #cvsd = sqrt(apply(scale(err_mat, cvm, FALSE)^2, 2, mean, na.rm = TRUE)/(nfolds - 1))
   
   cvlo = cvm - cvse
   cvup = cvm + cvse

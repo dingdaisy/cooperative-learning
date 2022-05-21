@@ -32,7 +32,6 @@ sim_seed = 333
 val_frac = 0.4
 type.measure='deviance'
 set.seed(sim_seed)
-
 alphalist = c(0,0.2,0.4,0.6,0.8,1.0,2.0)
 
 err_train_coop = err_test_coop = support_coop = 
@@ -204,7 +203,6 @@ for (ii in 1:simN){
   train_e = myroc(train_y, yhat_lasso_train)$area #calc_mse(yhat_lasso_train, train_y)
   err_train_lasso[ii] = train_e
   lasso_support[ii] = fit_lasso_cv$nzero[index_early]
-  #lasso_support_cv_1se[ii] = fit_lasso_cv$nzero[imin_1se]
   test_e = myroc(test_y, yhat_lasso_test)$area #calc_mse(yhat_lasso_test, test_y)
   err_test_lasso[ii] = test_e
   print(test_e)

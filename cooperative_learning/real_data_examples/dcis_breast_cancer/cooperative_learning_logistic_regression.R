@@ -143,8 +143,6 @@ coop_logistic_cv = function(x,z,y,alpha=0,foldid,nfolds=5,pf_values=NULL,
                                   niter = niter_LR, beta = rep(0, 1 + ncol(x) + ncol(z)),
                                   meth="glmnet")
   }
-  #full_fit = glmnet(xt0, yt0, standardize=F, lambda = lambda0, penalty.factor = pf_values)
-  #n_nonzero = full_fit$df
   
   return(list(cvm=cvm, cvsd=cvse, lambda=lambda0, 
               lambda.min=lambda.min, lambda.1se = lambda.1se,

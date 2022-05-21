@@ -11,11 +11,9 @@ calc_mse <- function(actual, predicted) {
 y = DOS
 prot = Proteomics
 met = Metabolomics
-
 G1_index = match(unique(Id), Id)
 prot_G1 = prot[G1_index,]
 met_G1 = met[G1_index,]
-
 x_fil = as.matrix(prot_G1)
 z_fil = as.matrix(met_G1)
 y = DOS[G1_index]
@@ -27,7 +25,6 @@ train_frac = 0.75
 sim_seed = 321
 val_frac = 0.4
 set.seed(sim_seed)
-
 alphalist = c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,3)
 
 err_train_coop = err_test_coop = support_coop = 
