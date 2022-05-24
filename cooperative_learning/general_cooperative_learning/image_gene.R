@@ -198,7 +198,7 @@ for (ii in 1:nsim){
   #proteomics on its own
   gfit = cv.glmnet(z_train,label_train,standardize=F)
   yhatz_train = as.vector(predict(gfit,z_train,s="lambda.min"))
-  yhatzc_train = 1*(yhatz0>mean(yhatz0))
+  yhatzc_train = 1*(yhatz_train>mean(yhatz_train))
   yhatz_val = as.vector(predict(gfit,z_val))
   yhatz_test = as.vector(predict(gfit,z_test))
   yhatzc_test = 1*(yhatz_test>mean(yhatz_test))
