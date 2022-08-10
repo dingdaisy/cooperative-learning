@@ -1,4 +1,7 @@
 source('cooperative_learning_logistic_regression.R')
+library(caret)
+library(glmnet)
+library(multiview)
 
 y_df = read.csv("./breast_cancer_data/Multimodal2_WUSU_Epi_Stroma_design_n156.csv", sep = ';')
 rna_df = read.csv("./breast_cancer_data/Multimodal2_WU_Epi_Stroma_n156_READS.csv")
@@ -24,15 +27,16 @@ z_fil = as.matrix(z)
 colnames(x_fil) = genes
 colnames(z_fil) = genes
 
-fit_mode = "1se"
+fit_mode = "min"
 simN = 10
 nfolds = 5
 train_frac = 0.75
 sim_seed = 333
 val_frac = 0.4
-type.measure='deviance'
+type.measure= 'deviance'
 set.seed(sim_seed)
-alphalist = c(0,0.2,0.4,0.6,0.8,1.0,2.0)
+
+alphalist = c(0,0.2,0.4,0.6,0.8,1)
 
 err_train_coop = err_test_coop = support_coop = 
   diff_err = matrix(NA, simN, length(alphalist))
@@ -63,6 +67,7 @@ for (ii in 1:simN){
   train_Z_raw <- z_fil[train_ind, ]
   test_Z_raw <- z_fil[test_ind, ]
   
+  # filter by variance
   std_C_train_X = apply(train_X_raw, 2, sd)
   X_ind = which(std_C_train_X > 1.23)
   train_X_raw = train_X_raw[,X_ind]
@@ -85,12 +90,14 @@ for (ii in 1:simN){
   train_Z = predict(preprocess_values_train_Z, train_Z_raw)
   test_Z = predict(preprocess_values_train_Z, test_Z_raw)
   
-  train_y <- y[train_ind]
-  test_y <- y[test_ind]
+  train_y = y[train_ind]
+  test_y = y[test_ind]
   
   foldid = sample(rep_len(1:nfolds, dim(train_X)[1]))
   
-  #separate model
+  fit_mode = "min"
+  
+  # Separate models
   print("Only X")
   X_lasso_fit = cv.glmnet(train_X, train_y, family = "binomial", alpha=1,
                           standardize = F, foldid=foldid,
@@ -106,10 +113,10 @@ for (ii in 1:simN){
     index_X = which(X_lasso_fit$lambda == X_lasso_fit$lambda.1se)
   }
   
-  X_train_e = myroc(train_y, X_yhat_lasso_train)$area #calc_mse(X_yhat_lasso_train, train_y)
+  X_train_e = myroc(train_y, X_yhat_lasso_train)$area 
   X_err_train_lasso[ii] = X_train_e
   
-  X_test_e = myroc(test_y, X_yhat_lasso_test)$area #calc_mse(X_yhat_lasso_test, test_y)
+  X_test_e = myroc(test_y, X_yhat_lasso_test)$area 
   X_err_test_lasso[ii] = X_test_e
   
   X_lasso_support[ii] = X_lasso_fit$nzero[index_X] 
@@ -130,14 +137,14 @@ for (ii in 1:simN){
     index_Z = which(Z_lasso_fit$lambda == Z_lasso_fit$lambda.1se)
   }
   
-  Z_train_e = myroc(train_y, Z_yhat_lasso_train)$area #calc_mse(Z_yhat_lasso_train, train_y)
+  Z_train_e = myroc(train_y, Z_yhat_lasso_train)$area 
   Z_err_train_lasso[ii] = Z_train_e
-  Z_test_e = myroc(test_y, Z_yhat_lasso_test)$area #calc_mse(Z_yhat_lasso_test, test_y)
+  Z_test_e = myroc(test_y, Z_yhat_lasso_test)$area 
   Z_err_test_lasso[ii] = Z_test_e
   Z_lasso_support[ii] = Z_lasso_fit$nzero[index_Z] 
   print(Z_test_e)
   
-  #late fusion
+  # Late fusion
   print("Late Fusion")
   second_stage_smp = floor(val_frac * nrow(train_X))
   val_ind = sort(sample(seq_len(nrow(train_X)), size = second_stage_smp))
@@ -183,7 +190,7 @@ for (ii in 1:simN){
   support_fuse_late[ii] = X_lasso_fit_late$nzero[late_index_X] + 
     Z_lasso_fit_late$nzero[late_index_Z]
   
-  #early fusion
+  # Early fusion
   print("Early Fusion")
   fit_lasso_cv = cv.glmnet(cbind(train_X,train_Z), train_y, 
                            family = "binomial", alpha=1,
@@ -200,10 +207,10 @@ for (ii in 1:simN){
     index_early = which(fit_lasso_cv$lambda == fit_lasso_cv$lambda.1se)
   }
   
-  train_e = myroc(train_y, yhat_lasso_train)$area #calc_mse(yhat_lasso_train, train_y)
+  train_e = myroc(train_y, yhat_lasso_train)$area 
   err_train_lasso[ii] = train_e
   lasso_support[ii] = fit_lasso_cv$nzero[index_early]
-  test_e = myroc(test_y, yhat_lasso_test)$area #calc_mse(yhat_lasso_test, test_y)
+  test_e = myroc(test_y, yhat_lasso_test)$area 
   err_test_lasso[ii] = test_e
   print(test_e)
   print(lasso_support[ii])
@@ -222,29 +229,25 @@ for (ii in 1:simN){
     print(alpha)
     
     pf_null = rep(1, ncol(train_X) + ncol(train_Z))
-    full_fit_no_pf = coop_logistic_cv(train_X,train_Z,train_y,
-                                      alpha=alpha,foldid,nfolds=max(foldid),
-                                      pf_values=pf_null,
-                                      niter_LR=10,verbose=F,fit_mode=fit_mode,
-                                      type.measure=type.measure)
-    
-    coop_coef = full_fit_no_pf$best_fit[2:length(full_fit_no_pf$best_fit)]
-    yhat_coop_new_no_pf_logit = cbind(train_X,train_Z) %*% coop_coef + (full_fit_no_pf$best_fit[1])
-    yhat_coop_new_no_pf = 1 / (1+exp(-yhat_coop_new_no_pf_logit))
+    full_fit_no_pf = cv.multiview(list(x=train_X,z=train_Z), train_y,
+                                  family = binomial(),
+                                  rho=alpha, foldid=foldid,
+                                  type.measure=type.measure)
+
+    yhat_coop_new_no_pf = predict(full_fit_no_pf, list(x=train_X,z=train_Z), s="lambda.min", type="response") #1 / (1+exp(-yhat_coop_new_no_pf_logit))
     
     new_train_coop_no_pf[ii,j] = myroc(train_y, yhat_coop_new_no_pf)$area #calc_mse(yhat_coop_new_no_pf, train_y)
     
     new_cv_coop_no_pf[ii, j] = min(full_fit_no_pf$cvm)
-    new_support_coop_no_pf[ii, j] = sum(full_fit_no_pf$best_fit != 0) #full_fit_no_pf$support[which.min(full_fit_no_pf$cvm)]
-    
-    yhat_coop_new_test_no_pf_logit = cbind(test_X, test_Z) %*% coop_coef + (full_fit_no_pf$best_fit[1])
-    yhat_coop_new_test_no_pf = 1 / (1+exp(-yhat_coop_new_test_no_pf_logit))
+    new_support_coop_no_pf[ii, j] = full_fit_no_pf$nzero[which.min(full_fit_no_pf$cvm)]
+
+    yhat_coop_new_test_no_pf = predict(full_fit_no_pf, list(x=test_X,z=test_Z), s="lambda.min", type="response") #1 / (1+exp(-yhat_coop_new_test_no_pf_logit))
     test_e_coop_new_no_pf = myroc(test_y, yhat_coop_new_test_no_pf)$area #calc_mse(yhat_coop_new_test_no_pf, test_y)
     new_test_coop_no_pf[ii,j] = test_e_coop_new_no_pf
     print("Full (no penalty factor)")
     print(new_test_coop_no_pf[ii,j])
     
-    cvm_min_no_pf[j] = min(full_fit_no_pf$cvm)
+    cvm_min_no_pf[j] = min(full_fit_no_pf$cvm) #full_fit_no_pf$cvm[full_fit_no_pf$index[2]] #
     test_MSE_min_no_pf[j] = test_e_coop_new_no_pf
     support_min_no_pf[j] = new_support_coop_no_pf[ii, j]
   }

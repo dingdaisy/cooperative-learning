@@ -77,6 +77,120 @@ cv_measure = function(predmat, y, nfolds, foldid, type.measure="deviance"){
   return(list(cv=res, N=N))
 }
 
+#Cooperative Logistic Regression
+multiview.logistic = function(x, z, y, lambda, theta = 0, 
+                              niter = 50, beta = rep(0, 1 + ncol(x) + ncol(z)),
+                              meth="glmnet", verbose=F){
+  
+  # version that centers features + target
+  # inputs lambda in standard parametrization
+  my = mean(y)
+  beta = c(log(my/(1-my)), rep(0, ncol(x) + ncol(z)))  #NOTE, with intercept
+  n = length(y)
+  
+  nx = ncol(x)
+  nz = ncol(z)
+  
+  xall = cbind(x, z)
+  
+  i = 0
+  
+  x_list=list(x=x, z=z)
+  beta_all = c(beta[1], beta[-1])
+  p1 <- ncol(x_list[[1L]])
+  a0 <- beta_all[1L]
+  betax <- beta_all[2L:(p1 + 1L)]
+  betaz <- beta_all[-(1L:(p1 + 1L))]
+  eta <- a0 + x %*% betax + z %*% betaz
+  pr <- 1/(1 + exp(-eta))
+  crit0 <- -sum(y * log(pr) + (1 - y) * log(1 - pr)) + 
+    lambda * (sum(abs(betax)) + sum(abs(betaz))) + 
+    (theta/2) * sum((x %*% betax - z %*% betaz)^2) 
+  
+  #crit0 = critf(x_list=list(x=x, z=z), y, lambda = lambda, beta_all = c(beta[1], beta[-1]),
+  #              theta = theta)
+  crit_imp = -10
+  
+  #for (i in 1:niter) {
+  while (i < niter & crit_imp < 0){
+    i = i + 1
+    xx = xall
+    eta = cbind(1, xx) %*% beta
+    pr = 1/(1 + exp(-eta))
+    w = pr * (1 - pr)
+    zz = eta + (y - pr)/(pr*(1-pr))  #working response
+    
+    # center working response and features, using weights
+    mzz = sum(w * zz)/sum(w)
+    zzc = zz - mzz
+    
+    mx = rep(NA, ncol(xx))
+    for (j in 1:ncol(xx)) {
+      mx[j] = sum(w * xx[, j])/sum(w)
+      xx[, j] = xx[, j] - mx[j]
+    }
+    
+    features = xx
+    target = zzc
+    fac = n/sum(w)
+    
+    lambda2 = lambda*fac/n  #glmnet parametrization
+    if (theta > 0) {
+      features = rbind(features, cbind(-sqrt(theta) * xx[, 1:nx], 
+                                       sqrt(theta) * xx[, -(1:nx)]))
+      target = c(target, rep(0, n))
+      w = c(w, rep(1,n))  #NOTE, weights for the agreement penalty
+      fac = 2*n/sum(w)  #NOTE, 2 times sample size
+      lambda2=lambda*fac/(2*n)  #NOTE, adjust lambda
+    }
+    
+    if (meth=="cvx"){
+      out = make_cvxr_problem_gaussian0(features, target, lambda2, w, intercept = FALSE, glmnet_lambda = TRUE)
+      result = solve(out$prob, verbose = FALSE)
+      beta = result$getValue(result$beta)
+    }
+    if (meth=="glmnet"){
+      #fit = glmnet(features, target, lambda = lambda2, weights = w, standardize = F, intercept = F)
+      fit = glmnet:::glmnet.fit(features, target, lambda = lambda2, weights = w/sum(w), intercept=F) #NOTE, intercept = F
+      b = as.numeric(fit$beta)
+      b0 = mzz - sum(mx * b) #mzz: working response mean; mx: feature mean
+      beta = c(b0, b)
+    }
+    
+    x_list = list(x=x, z=z)
+    beta_all = c(beta[1], beta[-1])
+    p1 <- ncol(x_list[[1L]])
+    a0 <- beta_all[1L]
+    betax <- beta_all[2L:(p1 + 1L)]
+    betaz <- beta_all[-(1L:(p1 + 1L))]
+    eta <- a0 + x %*% betax + z %*% betaz
+    pr <- 1/(1 + exp(-eta))
+    crit <- -sum(y * log(pr) + (1 - y) * log(1 - pr)) + 
+      lambda * (sum(abs(betax)) + sum(abs(betaz))) + 
+      (theta/2) * sum((x %*% betax - z %*% betaz)^2)
+    
+    #crit = critf(x_list=list(x=x, z=z), y, lambda = lambda, beta_all = c(beta[1], beta[-1]), theta = theta)
+    crit_imp = (crit - crit0) / crit0
+    
+    #print(crit)
+    #print(crit_imp)
+    #print(lambda)
+    #print(crit)
+    #print(crit0)
+    if (crit < crit0){
+      crit0 = crit
+    }
+    
+    if (verbose){
+      print(i)
+      cat(sprintf("mzz: %f, term: %f, b0: %f\n", mzz, sum(mx*b), b0))
+      cat(c("crit=", round(crit, 5), "b= ", round(beta[1:6], 3)), fill = T)
+    }
+  }
+  return(beta)
+}
+
+
 #Cooperative Logistic Regression with CV
 coop_logistic_cv = function(x,z,y,alpha=0,foldid,nfolds=5,pf_values=NULL,
                             niter_LR=50,verbose=F,fit_mode='min',type.measure='deviance'){
@@ -143,6 +257,8 @@ coop_logistic_cv = function(x,z,y,alpha=0,foldid,nfolds=5,pf_values=NULL,
                                   niter = niter_LR, beta = rep(0, 1 + ncol(x) + ncol(z)),
                                   meth="glmnet")
   }
+  #full_fit = glmnet(xt0, yt0, standardize=F, lambda = lambda0, penalty.factor = pf_values)
+  #n_nonzero = full_fit$df
   
   return(list(cvm=cvm, cvsd=cvse, lambda=lambda0, 
               lambda.min=lambda.min, lambda.1se = lambda.1se,
